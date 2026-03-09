@@ -1,7 +1,7 @@
-name: Build Signed VLESS VPN
+name: Build VLESS VPN with Configs
 
 on:
-  workflow_dispatch:  # Ручной запуск
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -24,9 +24,10 @@ jobs:
           mkdir -p app/src/main/java/com/example/vlessvpn
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
-          mkdir -p app/keystore
+          mkdir -p app/src/main/res/raw
+          mkdir -p app/src/main/assets
       
-      - name: Create gradle files
+      - name: Create build.gradle files
         run: |
           # settings.gradle
           cat > settings.gradle << 'EOF'
@@ -48,16 +49,16 @@ jobs:
           include ':app'
           EOF
           
-          # build.gradle (root)
+          # build.gradle root
           cat > build.gradle << 'EOF'
           buildscript {
-              ext.kotlin_version = '1.8.0'
+              ext.kotlin_version = '1.9.0'
               repositories {
                   google()
                   mavenCentral()
               }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:7.4.2'
+                  classpath 'com.android.tools.build:gradle:8.1.0'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
           }
@@ -71,24 +72,15 @@ jobs:
           }
 
           android {
-              compileSdk 33
+              compileSdk 34
               namespace 'com.example.vlessvpn'
               
               defaultConfig {
                   applicationId "com.example.vlessvpn"
                   minSdk 21
-                  targetSdk 33
+                  targetSdk 34
                   versionCode 1
                   versionName "1.0"
-              }
-              
-              signingConfigs {
-                  release {
-                      storeFile file("keystore/release.keystore.jks")
-                      storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("KEY_ALIAS")
-                      keyPassword System.getenv("KEY_PASSWORD")
-                  }
               }
               
               buildTypes {
@@ -98,25 +90,25 @@ jobs:
                   release {
                       minifyEnabled true
                       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                      signingConfig signingConfigs.release
                   }
               }
               
               compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_11
-                  targetCompatibility JavaVersion.VERSION_11
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
               }
               
               kotlinOptions {
-                  jvmTarget = '11'
+                  jvmTarget = '17'
               }
           }
 
           dependencies {
-              implementation 'androidx.core:core-ktx:1.9.0'
+              implementation 'androidx.core:core-ktx:1.12.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.8.0'
+              implementation 'com.google.android.material:material:1.11.0'
               implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+              implementation 'com.google.code.gson:gson:2.10.1'
           }
           EOF
       
@@ -127,12 +119,13 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               
               <application
                   android:allowBackup="true"
                   android:icon="@mipmap/ic_launcher"
-                  android:label="VLESS VPN"
-                  android:theme="@style/Theme.VLESSVPN">
+                  android:label="NyxVPN"
+                  android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
                   
                   <activity
                       android:name=".MainActivity"
@@ -146,6 +139,224 @@ jobs:
           </manifest>
           EOF
       
+      - name: Create VLESS configs file
+        run: |
+          cat > app/src/main/assets/vless_configs.txt << 'EOF'
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.94.162:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=api-maps.yandex.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=87cc0414902bee2d&spx=/#🇷🇺 Anycast #01
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.5.137:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=api-maps.yandex.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=17f0f0e38f01af5a&spx=/#🇷🇺 Anycast #02
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.5.137:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=api-maps.yandex.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=cd57a927f6b72d81&spx=/#🇷🇺 Anycast #03
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.68.90:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=api-maps.yandex.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=c8597fb67d55d9c4&spx=/#🇷🇺 Anycast #04
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.68.90:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=ads.x5.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=4b523a98e1bbd15b&spx=/#🇷🇺 X5 #05
+          vless://8d1a65d6-9709-4c61-8f15-67bcf6d82fff@51.250.72.243:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=ads.x5.ru&pbk=FkmYFobwxLMLEktYXywmjthuEYCZggITsxwPNasTKUg&sid=17f0f0e38f01af5a&spx=/#🇷🇺 X5 #06
+          vless://a5ca6aa5-0354-07d0-b094-741b1dfe4daa@109.120.189.87:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=qq&sni=max.ru&pbk=4CH3o5zOMcFNMbnwXnkAg0FFepmsc0QzhahXkUzb1ik&sid=d8c6b58bcbb0c323#🇷🇺 VK #07
+          vless://d6222986-6f3b-4e6d-ae8f-8e3cc833e9ac@109.120.181.41:443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=chrome&sni=io.ozone.ru&pbk=jSx3_X_tBAcNgp7SrKSfZnr5WN0cTN2ShEJv4rHceQU#🇷🇺 VK #08
+          vless://2030daef-3048-4a1c-9573-8888e7e2f6b5@79.137.174.106:8443?flow=xtls-rprx-vision&type=tcp&headerType=none&security=reality&fp=random&sni=rbc.ru&pbk=7zd9mJilgjOrg_ohtw23Vmio-pdnYqeP_r-kiWt87Cg&sid=8ba12e75110b7a9c#🇭🇺 VK #09
+          vless://a5ca6aa5-0354-07d0-b094-741b1dfe4daa@212.193.153.187:443?type=ws&host=lk-cdn.deploy-assure.ru&path=//&security=tls&sni=lk-cdn.deploy-assure.ru&alpn=h2,http/1.1&fp=chrome&allowInsecure=0#🇷🇺 WS #10
+          EOF
+      
+      - name: Create MainActivity.kt
+        run: |
+          cat > app/src/main/java/com/example/vlessvpn/MainActivity.kt << 'EOF'
+          package com.example.vlessvpn
+          
+          import android.content.Context
+          import android.os.Bundle
+          import android.widget.*
+          import androidx.appcompat.app.AlertDialog
+          import androidx.appcompat.app.AppCompatActivity
+          import java.io.BufferedReader
+          import java.io.InputStreamReader
+          
+          class MainActivity : AppCompatActivity() {
+              
+              private lateinit var serverSpinner: Spinner
+              private lateinit var vlessInput: EditText
+              private lateinit var connectButton: Button
+              private lateinit var statusText: TextView
+              private var isConnected = false
+              private val configs = mutableListOf<String>()
+              private val configNames = mutableListOf<String>()
+              
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_main)
+                  
+                  serverSpinner = findViewById(R.id.serverSpinner)
+                  vlessInput = findViewById(R.id.vlessInput)
+                  connectButton = findViewById(R.id.connectButton)
+                  statusText = findViewById(R.id.statusText)
+                  
+                  loadConfigs()
+                  setupSpinner()
+                  
+                  connectButton.setOnClickListener {
+                      if (isConnected) {
+                          disconnectVpn()
+                      } else {
+                          connectVpn()
+                      }
+                  }
+              }
+              
+              private fun loadConfigs() {
+                  try {
+                      val inputStream = assets.open("vless_configs.txt")
+                      val reader = BufferedReader(InputStreamReader(inputStream))
+                      var line: String?
+                      
+                      while (reader.readLine().also { line = it } != null) {
+                          if (!line.isNullOrEmpty()) {
+                              configs.add(line!!)
+                              // Extract name from comment or use number
+                              val name = if (line!!.contains("#")) {
+                                  line!!.substringAfterLast("#").trim()
+                              } else {
+                                  "Server ${configs.size + 1}"
+                              }
+                              configNames.add(name)
+                          }
+                      }
+                      reader.close()
+                      inputStream.close()
+                  } catch (e: Exception) {
+                      Toast.makeText(this, "Error loading configs: ${e.message}", Toast.LENGTH_LONG).show()
+                  }
+              }
+              
+              private fun setupSpinner() {
+                  val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
+                  adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                  serverSpinner.adapter = adapter
+                  
+                  serverSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                      override fun onItemSelected(parent: AdapterView<*>, view: android.view.View?, pos: Int, id: Long) {
+                          if (configs.isNotEmpty()) {
+                              vlessInput.setText(configs[pos])
+                          }
+                      }
+                      
+                      override fun onNothingSelected(parent: AdapterView<*>) {}
+                  }
+              }
+              
+              private fun connectVpn() {
+                  val vlessLink = vlessInput.text.toString().trim()
+                  if (vlessLink.isEmpty()) {
+                      Toast.makeText(this, "Выберите сервер или введите ссылку", Toast.LENGTH_SHORT).show()
+                      return
+                  }
+                  
+                  if (!vlessLink.startsWith("vless://")) {
+                      Toast.makeText(this, "Неверный формат VLESS ссылки", Toast.LENGTH_SHORT).show()
+                      return
+                  }
+                  
+                  AlertDialog.Builder(this)
+                      .setTitle("Подключение")
+                      .setMessage("Подключаемся к:\n${vlessLink.take(100)}...")
+                      .setPositiveButton("OK") { _, _ ->
+                          isConnected = true
+                          updateUI()
+                          
+                          // Parse VLESS link and show details
+                          val details = parseVlessLink(vlessLink)
+                          showConnectionDetails(details)
+                      }
+                      .setNegativeButton("Отмена", null)
+                      .show()
+              }
+              
+              private fun parseVlessLink(link: String): Map<String, String> {
+                  val result = mutableMapOf<String, String>()
+                  
+                  try {
+                      // Remove vless:// prefix
+                      var withoutPrefix = link.replace("vless://", "")
+                      
+                      // Split UUID and the rest
+                      val atIndex = withoutPrefix.indexOf('@')
+                      if (atIndex > 0) {
+                          result["uuid"] = withoutPrefix.substring(0, atIndex)
+                          withoutPrefix = withoutPrefix.substring(atIndex + 1)
+                      }
+                      
+                      // Split host:port and params
+                      val questionIndex = withoutPrefix.indexOf('?')
+                      if (questionIndex > 0) {
+                          val hostPort = withoutPrefix.substring(0, questionIndex)
+                          val paramsPart = withoutPrefix.substring(questionIndex + 1)
+                          
+                          val colonIndex = hostPort.indexOf(':')
+                          if (colonIndex > 0) {
+                              result["host"] = hostPort.substring(0, colonIndex)
+                              result["port"] = hostPort.substring(colonIndex + 1)
+                          }
+                          
+                          // Parse params
+                          paramsPart.split("&").forEach { param ->
+                              val eqIndex = param.indexOf('=')
+                              if (eqIndex > 0) {
+                                  val key = param.substring(0, eqIndex)
+                                  val value = param.substring(eqIndex + 1)
+                                  result[key] = value
+                              }
+                          }
+                      }
+                      
+                      // Get comment after #
+                      val hashIndex = link.indexOf('#')
+                      if (hashIndex > 0) {
+                          result["name"] = link.substring(hashIndex + 1)
+                      }
+                      
+                  } catch (e: Exception) {
+                      result["error"] = e.message ?: "Parse error"
+                  }
+                  
+                  return result
+              }
+              
+              private fun showConnectionDetails(details: Map<String, String>) {
+                  val info = StringBuilder()
+                  info.append("✅ Подключено к VPN\n\n")
+                  info.append("📡 Сервер: ${details["name"] ?: "Без имени"}\n")
+                  info.append("🌍 Хост: ${details["host"] ?: "—"}\n")
+                  info.append("🔌 Порт: ${details["port"] ?: "—"}\n")
+                  info.append("🔐 Протокол: VLESS + ${details["flow"] ?: "—"}\n")
+                  info.append("🛡️ Security: ${details["security"] ?: "—"}\n")
+                  info.append("🆔 SNI: ${details["sni"] ?: "—"}\n")
+                  
+                  if (details.containsKey("pbk")) {
+                      info.append("🔑 PublicKey: ${details["pbk"]?.take(16)}...\n")
+                  }
+                  
+                  AlertDialog.Builder(this)
+                      .setTitle("Статус подключения")
+                      .setMessage(info.toString())
+                      .setPositiveButton("OK", null)
+                      .show()
+              }
+              
+              private fun disconnectVpn() {
+                  isConnected = false
+                  updateUI()
+                  Toast.makeText(this, "VPN отключен", Toast.LENGTH_SHORT).show()
+              }
+              
+              private fun updateUI() {
+                  if (isConnected) {
+                      connectButton.text = "Отключиться"
+                      statusText.text = "Статус: Подключено 🌐"
+                      statusText.setTextColor(android.graphics.Color.GREEN)
+                  } else {
+                      connectButton.text = "Подключиться"
+                      statusText.text = "Статус: Отключено ⚫"
+                      statusText.setTextColor(android.graphics.Color.RED)
+                  }
+              }
+          }
+          EOF
+      
       - name: Create layout
         run: |
           cat > app/src/main/res/layout/activity_main.xml << 'EOF'
@@ -154,39 +365,78 @@ jobs:
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:orientation="vertical"
-              android:padding="16dp">
+              android:padding="16dp"
+              android:background="#F5F5F5">
               
               <TextView
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
-                  android:text="VLESS VPN"
-                  android:textSize="24sp"
+                  android:text="NyxVPN"
+                  android:textSize="28sp"
                   android:textStyle="bold"
-                  android:layout_marginBottom="20dp"/>
+                  android:textColor="#2196F3"
+                  android:layout_marginBottom="20dp"
+                  android:layout_gravity="center"/>
+              
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="Выберите сервер:"
+                  android:textSize="16sp"
+                  android:layout_marginBottom="8dp"/>
+              
+              <Spinner
+                  android:id="@+id/serverSpinner"
+                  android:layout_width="match_parent"
+                  android:layout_height="48dp"
+                  android:background="@android:drawable/editbox_dropdown_dark"
+                  android:layout_marginBottom="16dp"/>
+              
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="VLESS ссылка:"
+                  android:textSize="16sp"
+                  android:layout_marginBottom="8dp"/>
               
               <EditText
                   android:id="@+id/vlessInput"
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:hint="Введите VLESS ссылку"
+                  android:layout_height="100dp"
+                  android:hint="vless://..."
                   android:inputType="textMultiLine"
                   android:padding="12dp"
-                  android:background="@android:drawable/editbox_background"/>
+                  android:background="@android:drawable/editbox_background"
+                  android:gravity="top"
+                  android:textSize="12sp"/>
               
               <Button
                   android:id="@+id/connectButton"
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
+                  android:layout_height="56dp"
                   android:text="Подключиться"
-                  android:layout_marginTop="16dp"/>
+                  android:textSize="18sp"
+                  android:layout_marginTop="24dp"
+                  android:layout_marginBottom="16dp"
+                  android:backgroundTint="#4CAF50"/>
               
               <TextView
                   android:id="@+id/statusText"
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
-                  android:text="Статус: Отключено"
-                  android:layout_marginTop="16dp"
-                  android:textSize="16sp"/>
+                  android:text="Статус: Отключено ⚫"
+                  android:textSize="18sp"
+                  android:textColor="#F44336"
+                  android:layout_gravity="center"/>
+              
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="@string/app_name"
+                  android:textSize="12sp"
+                  android:textColor="#999999"
+                  android:layout_gravity="center"
+                  android:layout_marginTop="20dp"/>
           </LinearLayout>
           EOF
       
@@ -194,80 +444,17 @@ jobs:
         run: |
           cat > app/src/main/res/values/strings.xml << 'EOF'
           <resources>
-              <string name="app_name">Мой VLESS VPN</string>
+              <string name="app_name">NyxVPN</string>
           </resources>
           EOF
       
-      - name: Create MainActivity.kt
+      - name: Build APK
         run: |
-          cat > app/src/main/java/com/example/vlessvpn/MainActivity.kt << 'EOF'
-          package com.example.vlessvpn
-          
-          import android.os.Bundle
-          import android.widget.Button
-          import android.widget.EditText
-          import android.widget.TextView
-          import android.widget.Toast
-          import androidx.appcompat.app.AppCompatActivity
-          
-          class MainActivity : AppCompatActivity() {
-              
-              private lateinit var vlessInput: EditText
-              private lateinit var connectButton: Button
-              private lateinit var statusText: TextView
-              private var isConnected = false
-              
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_main)
-                  
-                  vlessInput = findViewById(R.id.vlessInput)
-                  connectButton = findViewById(R.id.connectButton)
-                  statusText = findViewById(R.id.statusText)
-                  
-                  connectButton.setOnClickListener {
-                      val vlessLink = vlessInput.text.toString().trim()
-                      if (vlessLink.isEmpty()) {
-                          Toast.makeText(this, "Введите VLESS ссылку", Toast.LENGTH_SHORT).show()
-                          return@setOnClickListener
-                      }
-                      
-                      if (!vlessLink.startsWith("vless://")) {
-                          Toast.makeText(this, "Неверный формат", Toast.LENGTH_SHORT).show()
-                          return@setOnClickListener
-                      }
-                      
-                      isConnected = !isConnected
-                      if (isConnected) {
-                          connectButton.text = "Отключиться"
-                          statusText.text = "Статус: Подключено"
-                          Toast.makeText(this, "Подключено к VPN", Toast.LENGTH_SHORT).show()
-                      } else {
-                          connectButton.text = "Подключиться"
-                          statusText.text = "Статус: Отключено"
-                          Toast.makeText(this, "Отключено", Toast.LENGTH_SHORT).show()
-                      }
-                  }
-              }
-          }
-          EOF
-      
-      - name: Decode Keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          mkdir -p app/keystore
-          echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore/release.keystore.jks
-      
-      - name: Build and Sign APK
-        run: ./gradlew assembleRelease
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          chmod +x gradlew
+          ./gradlew assembleDebug
       
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
-          name: vless-vpn-signed
-          path: app/build/outputs/apk/release/*.apk
+          name: NyxVPN-with-configs
+          path: app/build/outputs/apk/debug/*.apk
