@@ -1,0 +1,106 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      
+      - name: Create app
+        run: |
+          mkdir -p app/src/main/java/com/example/vpn
+          mkdir -p app/src/main/res/values
+          
+          # AndroidManifest.xml
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.example.vpn">
+              <application android:label="My VPN">
+                  <activity android:name=".MainActivity">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          
+          # MainActivity
+          cat > app/src/main/java/com/example/vpn/MainActivity.java << 'EOF'
+          package com.example.vpn;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  TextView tv = new TextView(this);
+                  tv.setText("VPN APP WORKING!");
+                  setContentView(tv);
+              }
+          }
+          EOF
+          
+          # build.gradle для app
+          cat > app/build.gradle << 'EOF'
+          apply plugin: 'com.android.application'
+          android {
+              compileSdkVersion 30
+              defaultConfig {
+                  applicationId "com.example.vpn"
+                  minSdkVersion 21
+                  targetSdkVersion 30
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          EOF
+          
+          # settings.gradle
+          cat > settings.gradle << 'EOF'
+          include ':app'
+          EOF
+          
+          # build.gradle
+          cat > build.gradle << 'EOF'
+          buildscript {
+              repositories { google() }
+              dependencies { classpath 'com.android.tools.build:gradle:4.2.0' }
+          }
+          EOF
+          
+          # gradle wrapper
+          mkdir -p gradle/wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-bin.zip
+          EOF
+          
+          # gradlew
+          cat > gradlew << 'EOF'
+          #!/usr/bin/env sh
+          echo "Gradle wrapper"
+          EOF
+          chmod +x gradlew
+      
+      - name: Build APK
+        run: |
+          ./gradlew assembleDebug || true
+          find . -name "*.apk" -exec cp {} . \;
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: MyVPN
+          path: "*.apk"
