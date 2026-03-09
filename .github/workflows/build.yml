@@ -1,0 +1,13 @@
+name: Тест
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ПРИВЕТ" > test.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: мой-файл
+          path: test.txt
